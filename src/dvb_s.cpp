@@ -7,48 +7,48 @@
  * Create: 2013-12-5
  */
 
-#include "dvb_c.h"
+#include "dvb_s.h"
 
 
-dvb_c::dvb_c()
+dvb_s::dvb_s()
 {
-	SetObjName("dvb_c");
+	SetObjName("dvb_s");
 	SigCb = NULL;
 
 }
 
 
-dvb_c::~dvb_c()
+dvb_s::~dvb_s()
 {
 	//DBG("Free ~dvb_c");
 }
 
 
-bool  dvb_c::DvbCInit(ModulatorInitParam & param)
+bool  dvb_s::DvbSInit(ModulatorInitParam &param)
 {
 	CCInit();
 	SigCb = param.cb;
 	CbData = param.Data;
 	type = param.tp;
+	CvlInit(param.cr);
 
 }
 
 
-bool dvb_c::Modulate(u8 *pPkt)
+bool dvb_s::Modulate(u8 *pPkt)
 {
 	if(NULL != SigCb)
 	{
 		u8 I, Q, quad;
-		u8 A,  B, Qbits;
 		IQSigal sgl;
 
 		CCEncoder(pPkt, buff2);
 		Convert(buff2);
-		while(true == GetSymbol(type, A, B, Qbits))
+		while(true == GetSymbol(I, Q))
 		{
-			EncoderIQ(A, B, &I, &Q);
 			quad = (I << 1 | Q);
-			sgl = MapQamIQ(type, quad, Qbits);
+			//INF("%x, %x, %x,%x, %x, %x.",I, Q, quad, buff2[0], buff2[1], buff2[203]);
+			sgl = MapQamIQ(type, quad, 0);
 
 			SigCb(CbData, sgl);
 		}

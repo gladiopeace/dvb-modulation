@@ -7,11 +7,11 @@ TARGET:= gdtd
 
 
 
-$(TARGET):  main.o ../dvb_c.a
+$(TARGET):  main.o ../dvb_modulator.a
 	$(CC) $(FLAG) -o $@ $^ 
 
 
-../dvb_c.a:
+../dvb_modulator.a:
 	@echo
 	@echo -------------------- build module $(subst _b,,$@)------------------
 	@echo
@@ -24,6 +24,6 @@ main.o: main.c
 
 clean:
 	cd ../src && make clean
-	-rm -f $(TARGET) main.o ../dvb_c.a
+	-rm -f $(TARGET) main.o ../dvb_modulator.a
 
 

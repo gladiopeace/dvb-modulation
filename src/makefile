@@ -1,8 +1,9 @@
 
-TARGET:= ../dvb_c.a
+TARGET:= ../dvb_modulator.a
 
-SRC_LIST:= channelcode.cpp framestructure.cpp modulation.cpp \
-		object.cpp dvb_c.cpp file.cpp tsfile.cpp
+SRC_LIST:= object.cpp  file.cpp tsfile.cpp \
+		channelcode.cpp framestructure.cpp modulation.cpp \
+		dvb_c.cpp dvb_s.cpp
 
 OBJ_LIST:= $(patsubst %.cpp, obj/%.o,$(SRC_LIST))
 

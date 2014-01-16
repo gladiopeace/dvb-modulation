@@ -1,9 +1,11 @@
+obj/object.o: object.cpp object.h typedefine.h
+obj/file.o: file.cpp file.h object.h typedefine.h
+obj/tsfile.o: tsfile.cpp tsfile.h file.h object.h typedefine.h
 obj/channelcode.o: channelcode.cpp channelcode.h object.h typedefine.h
 obj/framestructure.o: framestructure.cpp framestructure.h object.h \
  typedefine.h
 obj/modulation.o: modulation.cpp modulation.h object.h typedefine.h
-obj/object.o: object.cpp object.h typedefine.h
 obj/dvb_c.o: dvb_c.cpp dvb_c.h channelcode.h object.h typedefine.h \
  framestructure.h modulation.h
-obj/file.o: file.cpp file.h object.h typedefine.h
-obj/tsfile.o: tsfile.cpp tsfile.h file.h object.h typedefine.h
+obj/dvb_s.o: dvb_s.cpp dvb_s.h channelcode.h object.h typedefine.h \
+ framestructure.h modulation.h
