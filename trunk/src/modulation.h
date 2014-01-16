@@ -14,8 +14,9 @@
 
 
 
-enum DvbcMdlType_e
+enum DvbMdlType_e
 {
+	QPSK,
 	QAM_16,
 	QAM_32,
 	QAM_64,
@@ -84,8 +85,48 @@ class conversion: public virtual Object
 			ByteCout = 0;
 		};
 		virtual ~conversion() {};
-		bool convert(u8 *pPkt);
-		bool GetSymbol(DvbcMdlType_e tp, u8 &A, u8 &B, u8 &Qbits);
+		bool Convert(u8 *pPkt);
+		bool GetSymbol(DvbMdlType_e tp, u8 &A, u8 &B, u8 &Qbits);
+
+
+};
+
+enum PunctureCodeRate
+{
+	CODE_RATE_1_2,
+	CODE_RATE_2_3,
+	CODE_RATE_3_4,
+	CODE_RATE_5_6,
+	CODE_RATE_7_8
+};
+class convolutional: public virtual Object
+{
+
+	private:
+		u8 ByteBuff[204];
+		u8 ByteCout;
+		u32 G12BuffBit;
+		u8 IQBuff[32];
+		u8 IQBIdx;
+		u8 IQBMax;
+		u8 PunctureMax;
+		u8 PuncIdx;
+		u8 PunBool[16];
+	public:
+		convolutional()
+		{
+			SetObjName("convolutional");
+			ByteCout = 0;
+			G12BuffBit = 0 ;
+			IQBIdx = 0;
+			IQBMax = 0;
+			PunctureMax = 0;
+			PuncIdx = 0;
+		};
+		virtual ~convolutional() {};
+		bool CvlInit(PunctureCodeRate cr);
+		bool Convert(u8 *pPkt);
+		bool GetSymbol(u8 &I, u8 &Q);
 
 
 };
@@ -109,6 +150,7 @@ class diffencoder: public virtual Object
 class mapping: public virtual Object
 {
 	private:
+		static IQSigal QPSKMap[4];
 		static IQSigal Qam16Map[4][4];
 		static IQSigal Qam32Map[4][8];
 		static IQSigal Qam64Map[4][16];
@@ -121,28 +163,19 @@ class mapping: public virtual Object
 		};
 		virtual ~mapping() {};
 
-		IQSigal MapQamIQ(DvbcMdlType_e tp, u8 quadrant, u8 rotation);
+		IQSigal MapQamIQ(DvbMdlType_e tp, u8 quadrant, u8 rotation);
 
 };
 
 typedef bool (* IQSignalCallback)(u32 CbData , IQSigal sig);
 
-class modulation: public conversion, public mapping, public diffencoder
+
+class ModulatorInitParam: public virtual Object
 {
-	private:
-		u32 CbData;
-		IQSignalCallback SigCb;
 	public:
-		modulation()
-		{
-			SetObjName("modulation");
-			SigCb = NULL;
-		};
-
-		virtual ~modulation() {};
-
-		bool MdInit(IQSignalCallback cb, u32 Data);
-		bool Modulate(DvbcMdlType_e tp , u8 *pPkt);
+		DvbMdlType_e tp;
+		IQSignalCallback cb;
+		u32 Data;
+		PunctureCodeRate cr;
 };
-
 

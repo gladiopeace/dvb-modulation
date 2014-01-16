@@ -19,8 +19,10 @@
 
 
 
-class dvb_c: public ChannelCode, public framestructure, \
-	public conversion, public diffencoder, public mapping
+
+
+class dvb_s: public ChannelCode, public framestructure, \
+	public convolutional, public diffencoder, public mapping
 {
 	private:
 		u32 CbData;
@@ -29,10 +31,10 @@ class dvb_c: public ChannelCode, public framestructure, \
 		DvbMdlType_e type;
 
 	public:
-		dvb_c();
+		dvb_s();
 
-		virtual ~dvb_c();
-		bool  DvbCInit(ModulatorInitParam & param);
+		virtual ~dvb_s();
+		bool  DvbSInit(ModulatorInitParam & param);
 		bool Modulate(u8 *pPkt);
 
 };

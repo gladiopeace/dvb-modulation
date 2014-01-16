@@ -1,11 +1,14 @@
 
-
+#include "dvb_s.h"
 #include "dvb_c.h"
 #include "tsfile.h"
 #include "stdlib.h"
 
 
 #define SOURCE_TS	"ts.dat"
+#define DVB_C_IQ 	"IQ_Final_c.ts"
+#define DVB_S_IQ 	"IQ_Final_s.ts"
+
 #define BUFF_SIZE (204)
 
 
@@ -16,21 +19,21 @@
 */
 bool IQSignalProcCb(u32 CbData , IQSigal sig)
 {
-	static u32 wc = 0;
+	//static u32 wc = 0;
 	CFile *pStorFile = (CFile *)CbData;
 	//if(wc < 5)
 	{
 		//DBG("wc:%d, I:%d Q:%d;", wc, sig.I , sig.Q);
 		//pStorFile->Write((u8 *)(&sig), sizeof(IQSigal), -1);
-		wc++;
-		sig.I += 7;
-		pStorFile->Write((u8 *)(&(sig.I)), sizeof(u8), -1);
+		//wc++;
+		//sig.I += 7;
+		pStorFile->Write((u8 *)(&(sig)), sizeof(u8), -1);
 	}
 
 	return true;
 }
 
-
+/*
 int test1(void)
 {
 	CTSFile *pFrom;
@@ -112,7 +115,7 @@ int test1(void)
 	{
 		ERR("open file failed!!!");
 	}
-	/*delete pFrom;
+	delete pFrom;
 	delete pRand;
 	delete pRson;
 	delete pInter;
@@ -122,35 +125,42 @@ int test1(void)
 	delete pISig;
 	delete pQSig;
 	Object::DumpObjInfo();
-*/
 }
 
+*/
 
-int test2(void)
+int test_dvb_c(void)
 {
 	CTSFile *pFrom;
 	CFile *pTo;
 
 	dvb_c *pDvb_c;
-	u8 buff[BUFF_SIZE], buff2[BUFF_SIZE];
+	u8 buff[BUFF_SIZE];
 	u32 PktIdx;
+	ModulatorInitParam param;
 
 
 	pFrom = new CTSFile(SOURCE_TS);
-	pTo = new CFile("IQ_Final.ts");
+	pTo = new CFile(DVB_C_IQ);
 	pDvb_c = new dvb_c();
+	param.cb = IQSignalProcCb;
+	param.Data = (u32)pTo;
+	param.tp = QAM_64;
 
 	if((pFrom->OpenAndAnalyse()) &&
 			(pTo->Open(CFile::OPEN_BIN_WRITE_ONLY)))
 	{
-		pDvb_c->DvbCInit(IQSignalProcCb, (u32)pTo);
+		if(false == pFrom->TraceTsfileState())
+		{
+			ERR("open ts file failed! \n");
+		}
+		pDvb_c->DvbCInit(param);
 		PktIdx = 0;
 
 		while(PktIdx < pFrom->GetPacketCount())
 		{
 			pFrom->ReadPacket(buff, PktIdx);
-			pDvb_c->CCEncoder(buff, buff2);
-			pDvb_c->Modulate(QAM_64, buff2);
+			pDvb_c->Modulate(buff);
 			PktIdx++;
 		}
 	}
@@ -163,10 +173,54 @@ int test2(void)
 	//delete pDvb_c;
 
 	Object::DumpObjInfo();
-*/
+	*/
 }
 
 
+int test_dvb_s(void)
+{
+	CTSFile *pFrom;
+	CFile *pTo;
+
+	dvb_s *pDvb_s;
+	u8 buff[BUFF_SIZE];
+	u32 PktIdx;
+	ModulatorInitParam param;
+
+	pFrom = new CTSFile(SOURCE_TS);
+	pTo = new CFile(DVB_S_IQ);
+	pDvb_s = new dvb_s();
+	param.cb = IQSignalProcCb;
+	param.Data = (u32)pTo;
+	param.tp = QPSK;
+	param.cr = CODE_RATE_2_3;
+
+	if((pFrom->OpenAndAnalyse()) &&
+			(pTo->Open(CFile::OPEN_BIN_WRITE_ONLY)))
+	{
+		pDvb_s->DvbSInit(param);
+		PktIdx = 0;
+
+		while(PktIdx < pFrom->GetPacketCount())
+		{
+			pFrom->ReadPacket(buff, PktIdx);
+			pDvb_s->Modulate(buff);
+			PktIdx++;
+		}
+	}
+	else
+	{
+		ERR("open file failed!!!");
+	}
+	/*delete pFrom;
+	//delete pTo;
+	//delete pDvb_c;
+
+	Object::DumpObjInfo();
+	*/
+}
+
+/*
 int test3(void)
 {
 	CFile *pMTuple, *pDiffEnc, * pISig , *pQSig ;
@@ -217,14 +271,13 @@ int test3(void)
 	{
 		ERR("open file failed!!!");
 	}
-	/*delete pMTuple;
+	delete pMTuple;
 	delete pDiffEnc;
 	delete pDvb_c;
 	delete pISig;
 	delete pQSig;
 
 	Object::DumpObjInfo();
-*/
 }
 
 
@@ -261,17 +314,13 @@ int test4(char *FileName)
 
 
 }
-
+*/
 
 int main(int argc, char *argv[])
 {
-	test1();
-	test2();
-	test3();
-	if(argc > 1)
-	{
-		test4(argv[1]);
-	}
+	test_dvb_c();
+	test_dvb_s();
+
 	Object::DumpObjInfo();
 	Object::FreeAllObj();
 	Object::DumpObjInfo();

@@ -9,7 +9,7 @@
 
 #include "modulation.h"
 
-bool conversion::convert(u8 *pPkt)
+bool conversion::Convert(u8 *pPkt)
 {
 	if(0 == ByteCout)
 	{
@@ -102,7 +102,7 @@ Qam128Symbol *conversion::GetSymbol(void)
 }
 */
 
-bool conversion::GetSymbol(DvbcMdlType_e tp, u8 &A, u8 &B, u8 &Qbits)
+bool conversion::GetSymbol(DvbMdlType_e tp, u8 &A, u8 &B, u8 &Qbits)
 {
 	u8 bitlen = 0;
 	switch(tp)
@@ -143,6 +143,130 @@ bool conversion::GetSymbol(DvbcMdlType_e tp, u8 &A, u8 &B, u8 &Qbits)
 	BitCout -= bitlen;
 	return true;
 }
+
+
+bool convolutional::CvlInit(PunctureCodeRate cr)
+{
+
+	switch(cr)
+	{
+		case CODE_RATE_1_2 :  // 1/2
+			PunctureMax = 2;
+			IQBMax = 2;
+			PunBool[0] = true;
+			PunBool[1] = true;
+			break;
+		case(CODE_RATE_2_3) : // 2/3
+			PunctureMax = 4;
+			IQBMax = 3;
+			PunBool[0] = true;
+			PunBool[1] = true;
+			PunBool[2] = false;
+			PunBool[3] = true;
+			break;
+		case(CODE_RATE_3_4) : // 3/4
+			PunctureMax = 6;
+			IQBMax = 4;
+			for(int i = 0; i < PunctureMax; i++)
+			{
+				PunBool[i] = true;
+			}
+			PunBool[2] = false;
+			PunBool[5] = false;
+			break;
+		case(CODE_RATE_5_6) : //5/6
+			PunctureMax = 10;
+			IQBMax = 6;
+			for(int i = 0; i < PunctureMax; i++)
+			{
+				PunBool[i] = true;
+			}
+			PunBool[2] = false;
+			PunBool[5] = false;
+			PunBool[6] = false;
+			PunBool[9] = false;
+			break;
+		case(CODE_RATE_7_8) : //7/8
+			PunctureMax = 14;
+			IQBMax = 8;
+			for(int i = 0; i < PunctureMax; i++)
+			{
+				PunBool[i] = true;
+			}
+			PunBool[2] = false;
+			PunBool[4] = false;
+			PunBool[6] = false;
+			PunBool[9] = false;
+			PunBool[10] = false;
+			PunBool[13] = false;
+			break;
+		default:
+			ERR(" no such a convolutional code %d", cr);
+			break;
+	}
+	PuncIdx = 0;
+}
+
+bool convolutional::Convert(u8 *pPkt)
+{
+	if(0 == ByteCout)
+	{
+		memcpy(ByteBuff, pPkt, 204);
+		ByteCout = 204;
+		return true;
+	}
+	else
+	{
+		ERR("ByteCout  %d", ByteCout);
+		return false;
+	}
+}
+
+bool convolutional::GetSymbol(u8 &I, u8 &Q)
+{
+	if(IQBMax <= IQBIdx)
+	{
+		u8 X, Y, idx;
+		if(0 == ByteCout)
+		{
+			return false;
+		}
+		G12BuffBit = (G12BuffBit << 8) | ByteBuff[204 - ByteCout];
+		ByteCout --;
+		IQBIdx = 0;
+		IQBMax = 0;
+		//IQBIdx = PunctureMax;
+		for(idx = 0 ; idx < 8; idx ++)
+		{
+			/* G1(X) = 171 oct. G2(X) = 133 oct. */
+			X = ((G12BuffBit >> (7 - idx)) & 0x1) ^ ((G12BuffBit >> (7 - idx + 1)) & 0x1) ^ ((G12BuffBit >> (7 - idx + 2)) & 0x1)
+				^ ((G12BuffBit >> (7 - idx + 3)) & 0x1) ^ ((G12BuffBit >> (7 - idx + 6)) & 0x1);
+			Y = ((G12BuffBit >> (7 - idx)) & 0x1) ^ ((G12BuffBit >> (7 - idx + 2)) & 0x1) ^ ((G12BuffBit >> (7 - idx + 3)) & 0x1)
+				^ ((G12BuffBit >> (7 - idx + 5)) & 0x1) ^ ((G12BuffBit >> (7 - idx + 6)) & 0x1);
+			/*need puncture following  */
+			if(PunBool[PuncIdx++])
+				IQBuff[IQBMax++ ] = X;
+
+			if(PuncIdx >= PunctureMax)
+				PuncIdx = 0;
+
+			if(PunBool[PuncIdx++])
+				IQBuff[IQBMax ++] = Y;
+
+			if(PuncIdx >= PunctureMax)
+				PuncIdx = 0;
+
+		}
+	}
+	I = IQBuff[IQBIdx ++];
+	Q = IQBuff[IQBIdx ++];
+	return true;
+}
+
+IQSigal mapping::QPSKMap[4] =
+{
+	{1, 1}, {1, -1}, { -1, 1}, { -1, -1}
+};
 
 IQSigal mapping::Qam64Map[4][16] =
 {
@@ -351,11 +475,20 @@ IQSigal mapping::Qam256Map[4][64] =
 		{ -9, -9},  { -11, -9}, { -9, -11}, { -11, -11}
 	},
 };
-IQSigal mapping::MapQamIQ(DvbcMdlType_e tp, u8 quadrant, u8 rotation)
+IQSigal mapping::MapQamIQ(DvbMdlType_e tp, u8 quadrant, u8 rotation)
 {
 	IQSigal ret;
 	switch(tp)
 	{
+		case QPSK:
+		{
+			if(quadrant >= 4)
+			{
+				ERR("param error");
+			}
+			ret = QPSKMap[quadrant];
+		}
+		break;
 		case QAM_16:
 		{
 			if((quadrant >= 4) || (rotation >= 4))
@@ -420,33 +553,7 @@ bool diffencoder::EncoderIQ(u8 A, u8 B, u8 *I, u8   *Q)
 
 
 
-bool modulation::MdInit(IQSignalCallback cb, u32 Data)
-{
-	SigCb = cb;
-	CbData = Data;
-	return true;
-}
 
-
-bool modulation::Modulate(DvbcMdlType_e tp , u8 *pPkt)
-{
-	u8 I, Q, quad;
-	u8 A,  B, Qbits;
-	IQSigal sgl;
-	convert(pPkt);
-	while(true == GetSymbol(tp,A, B, Qbits ))
-	{
-		EncoderIQ(A, B, &I, &Q);
-		quad = (I << 1 | Q);
-		sgl = MapQamIQ(tp, quad, Qbits);
-
-		if(NULL != SigCb)
-		{
-			SigCb(CbData, sgl);
-		}
-	}
-	return true;
-}
 
 
 
